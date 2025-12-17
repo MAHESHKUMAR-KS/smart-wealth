@@ -6,6 +6,7 @@ import numpy as np
 from typing import List, Dict, Tuple
 from config import *
 from ai_predictor import FundPerformancePredictor
+from ai_risk_assessment import EnhancedRiskProfiler
 
 
 class FundAnalyzer:

@@ -18,6 +18,8 @@ An advanced mutual fund advisory platform with real-time analytics and AI-powere
 - **AI Recommendation Engine** - Enhanced fund selection using predictive models
 - **Intelligent Portfolio Optimization** - Dynamic allocation based on market conditions
 - **AI Financial Assistant** - Chatbot for investment queries and guidance
+- **AI-Powered Risk Assessment** - Machine learning models to analyze user behavior patterns and refine risk profiling
+- **User Clustering** - Group users with similar profiles for better recommendations
 
 ## Installation
 
@@ -51,6 +53,12 @@ Chatbot interface that answers common investment questions about:
 - Portfolio diversification
 - Tax-saving investments
 - Retirement planning
+
+### 3. AI-Powered Risk Assessment (`ai_risk_assessment.py`)
+Uses machine learning to analyze user behavior patterns and refine risk profiling:
+- **User Behavior Analyzer**: Analyzes user responses and profile data to predict risk tolerance
+- **User Cluster Analyzer**: Groups users with similar profiles for better recommendations
+- **Enhanced Risk Profiler**: Combines traditional and AI-based risk profiling for more accurate assessments
 
 ## Usage
 

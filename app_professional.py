@@ -9,6 +9,7 @@ from fund_analyzer import FundAnalyzer
 from portfolio_tools import SIPCalculator, GoalPlanner, PortfolioAnalyzer
 from config import *
 from ai_predictor import FundPerformancePredictor, integrate_ai_features
+from ai_risk_assessment import EnhancedRiskProfiler
 
 # Page configuration
 st.set_page_config(
@@ -57,6 +58,8 @@ if 'analyzer' not in st.session_state:
     # Initialize AI components
     predictor, optimizer = integrate_ai_features(st.session_state.analyzer, st.session_state.analyzer.df)
     st.session_state.predictor = predictor
+    # Initialize AI risk profiler
+    st.session_state.risk_profiler = EnhancedRiskProfiler()
 
 if 'user_profile' not in st.session_state:
     st.session_state.user_profile = {}
@@ -114,7 +117,7 @@ def risk_profiler():
             horizontal=True
         )
     
-    # Calculate risk profile
+    # Calculate traditional risk profile
     risk_scores = {
         "Panic and sell": 1, "Feel concerned": 2, "Hold steady": 3, "Buy more": 4,
         "Preserving capital": 1, "Steady growth": 2, "Beating inflation": 3, "Maximum returns": 4
@@ -123,15 +126,47 @@ def risk_profiler():
     score = risk_scores[q1] + risk_scores[q2]
     
     if score <= 3:
-        risk_profile = 'conservative'
+        traditional_risk_profile = 'conservative'
     elif score <= 5:
-        risk_profile = 'moderate'
+        traditional_risk_profile = 'moderate'
     else:
-        risk_profile = 'aggressive'
+        traditional_risk_profile = 'aggressive'
+    
+    # AI-powered risk assessment
+    user_profile_data = {
+        'age': age,
+        'investment_amount': investment_amount,
+        'horizon': horizon,
+        'risk_reaction': q1,
+        'return_preference': q2,
+        'goal': goal,
+        'risk_profile': traditional_risk_profile
+    }
+    
+    # Add user profile to AI risk profiler for training
+    st.session_state.risk_profiler.add_user_profile(user_profile_data)
+    
+    # Get AI-enhanced risk profile
+    enhanced_profile = st.session_state.risk_profiler.enhanced_risk_profile(user_profile_data)
+    risk_profile = enhanced_profile['final_profile']
     
     # Show determined risk profile
     profile_info = RISK_PROFILES[risk_profile]
-    st.info(f"**Your Risk Profile: {profile_info['name']}** - {profile_info['description']}")
+    
+    # Display both traditional and AI profiles
+    col1, col2 = st.columns(2)
+    with col1:
+        st.info(f"**Traditional Risk Profile: {RISK_PROFILES[traditional_risk_profile]['name']}**")
+    with col2:
+        st.success(f"**AI-Enhanced Risk Profile: {profile_info['name']}**")
+    
+    st.markdown(f"_Description: {profile_info['description']}_")
+    
+    # Show AI insights if available
+    if enhanced_profile.get('ai_predicted_profile'):
+        st.caption(f"_AI Confidence: {enhanced_profile['prediction_confidence']:.2f}_")
+    if enhanced_profile.get('cluster_assignment') is not None:
+        st.caption(f"_User Cluster: {enhanced_profile['cluster_assignment']}_")
     
     if st.button("🎯 Generate Personalized Portfolio", type="primary", use_container_width=True):
         with st.spinner("Analyzing 800+ funds and building your optimal portfolio..."):
