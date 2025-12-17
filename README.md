@@ -43,6 +43,11 @@ An advanced mutual fund advisory platform with real-time analytics and AI-powere
    python train_ai_models.py
    ```
 
+5. (Optional) Train AI models on Kaggle:
+   - Use `kaggle_risk_assessment.ipynb` notebook
+   - Download trained models
+   - Integrate with `download_kaggle_models.py`
+
 ## AI Components
 
 ### 1. Fund Performance Predictor (`ai_predictor.py`)
@@ -71,6 +76,13 @@ Allows manual training of AI models with custom data:
 - Train user clustering model with K-Means
 - Save trained models for later use
 - Test models with new user profiles
+
+### 5. Kaggle Training (`kaggle_risk_assessment.ipynb`)
+Train AI models using Kaggle's powerful computing resources:
+- Jupyter notebook optimized for Kaggle environment
+- Synthetic data generation for training
+- Comprehensive visualization and evaluation
+- Model export for application integration
 
 ## Usage
 
