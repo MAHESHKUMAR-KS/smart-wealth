@@ -15,14 +15,12 @@ from portfolio_tools import SIPCalculator, GoalPlanner, PortfolioAnalyzer
 from realtime_data import RealTimeDataFetcher, LivePortfolioTracker, NewsSimulator
 from backtesting import BacktestEngine, PerformanceComparator, WhatIfAnalyzer
 from config import *
-<<<<<<< HEAD
-# Added for WealthyWise Assistant
+
+# AI imports for enhanced features
 from ai_chatbot import get_chatbot_response
-=======
 from ai_predictor import FundPerformancePredictor, PortfolioOptimizer, integrate_ai_features
 from ai_assistant import FinancialAIAssistant
 from ai_risk_assessment import EnhancedRiskProfiler
->>>>>>> 692cca8a2124e482a55273fbecd5d5742d1c0061
 
 # Page configuration
 st.set_page_config(
@@ -656,13 +654,8 @@ def main():
             "🎯 What-If Scenarios",
             "⚖️ Fund Comparison",
             "💹 SIP Calculator",
-<<<<<<< HEAD
-            "📚 Learning Hub",
-            "🤖 WealthyWise Assistant"  # Added new assistant option
-=======
-            "🤖 AI Assistant",
+            "🤖 WealthyWise Assistant",
             "📚 Learning Hub"
->>>>>>> 692cca8a2124e482a55273fbecd5d5742d1c0061
         ]
     )
     
@@ -869,11 +862,6 @@ def main():
     elif page == "💹 SIP Calculator":
         st.header("💹 SIP Calculator & Goal Planner")
         st.info("Use the What-If Scenarios section for detailed SIP analysis")
-        
-    elif page == "🤖 AI Assistant":
-        # Initialize and render AI assistant
-        assistant = FinancialAIAssistant()
-        assistant.render_chat_interface()
         
     elif page == "📚 Learning Hub":
         st.header("📚 Investment Education Hub")
