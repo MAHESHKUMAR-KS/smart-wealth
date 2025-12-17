@@ -38,6 +38,11 @@ An advanced mutual fund advisory platform with real-time analytics and AI-powere
    streamlit run app_advanced.py
    ```
 
+4. (Optional) Manually train AI models with your own data:
+   ```
+   python train_ai_models.py
+   ```
+
 ## AI Components
 
 ### 1. Fund Performance Predictor (`ai_predictor.py`)
@@ -59,6 +64,13 @@ Uses machine learning to analyze user behavior patterns and refine risk profilin
 - **User Behavior Analyzer**: Analyzes user responses and profile data to predict risk tolerance
 - **User Cluster Analyzer**: Groups users with similar profiles for better recommendations
 - **Enhanced Risk Profiler**: Combines traditional and AI-based risk profiling for more accurate assessments
+
+### 4. Manual Training Script (`train_ai_models.py`)
+Allows manual training of AI models with custom data:
+- Train behavior analysis model with Random Forest Classifier
+- Train user clustering model with K-Means
+- Save trained models for later use
+- Test models with new user profiles
 
 ## Usage
 
