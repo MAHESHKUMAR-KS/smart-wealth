@@ -19,6 +19,8 @@ except ImportError:
 
 # Import the WealthyWise Assistant
 from wealthywise_assistant import render_chat_interface
+# Import the Debug Assistant
+from debug_assistant import render_debug_chat_interface
 
 # Page configuration
 st.set_page_config(
@@ -555,7 +557,8 @@ def main():
             "🎯 Portfolio Recommendations",
             "💹 SIP & Goal Calculator",
             "🔍 Fund Explorer",
-            "🎓 WealthyWise Assistant",  # Added new assistant page
+            "🎓 WealthyWise Assistant",
+            "🐛 Debug Assistant",  # Added debug assistant for troubleshooting
             "📚 Learning Center"
         ]
         
@@ -612,8 +615,11 @@ def main():
     elif page == "🔍 Fund Explorer":
         fund_explorer()
     
-    elif page == "🎓 WealthyWise Assistant":  # Added new assistant page
+    elif page == "🎓 WealthyWise Assistant":
         render_chat_interface()
+    
+    elif page == "🐛 Debug Assistant":
+        render_debug_chat_interface()
     
     elif page == "📚 Learning Center":
         st.header("📚 Investment Education Hub")
