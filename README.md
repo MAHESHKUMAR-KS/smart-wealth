@@ -44,7 +44,8 @@ An advanced mutual fund advisory platform with real-time analytics and AI-powere
    ```
 
 5. (Optional) Train AI models on Kaggle:
-   - Use `kaggle_risk_assessment.ipynb` notebook
+   - Use `kaggle_risk_assessment.ipynb` notebook (with synthetic data)
+   - Or use `kaggle_custom_dataset_training.ipynb` with your own dataset
    - Download trained models
    - Integrate with `download_kaggle_models.py`
 
@@ -83,6 +84,13 @@ Train AI models using Kaggle's powerful computing resources:
 - Synthetic data generation for training
 - Comprehensive visualization and evaluation
 - Model export for application integration
+
+### 6. Custom Dataset Training (`kaggle_custom_dataset_training.ipynb`)
+Train AI models with your own dataset:
+- Designed specifically for your custom data
+- Easy-to-follow notebook interface
+- Automatic model saving for application use
+- Detailed performance metrics and visualizations
 
 ## Usage
 
