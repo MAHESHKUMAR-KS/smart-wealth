@@ -15,6 +15,8 @@ from portfolio_tools import SIPCalculator, GoalPlanner, PortfolioAnalyzer
 from realtime_data import RealTimeDataFetcher, LivePortfolioTracker, NewsSimulator
 from backtesting import BacktestEngine, PerformanceComparator, WhatIfAnalyzer
 from config import *
+# Added for WealthyWise Assistant
+from ai_chatbot import get_chatbot_response
 
 # Page configuration
 st.set_page_config(
@@ -90,6 +92,11 @@ if 'recommended_portfolio' not in st.session_state:
     st.session_state.recommended_portfolio = None
 if 'last_refresh' not in st.session_state:
     st.session_state.last_refresh = datetime.now()
+# Added for WealthyWise Assistant
+if 'chat_history' not in st.session_state:
+    st.session_state.chat_history = []
+if 'persona_data' not in st.session_state:
+    st.session_state.persona_data = None
 
 
 def show_live_market_dashboard():
@@ -545,104 +552,75 @@ def show_what_if_scenarios():
 
 
 def show_performance_comparison():
-    """Advanced fund comparison tools"""
-    st.header("⚖️ Advanced Performance Comparison")
+    """Fund performance comparison tool"""
+    st.header("⚖️ Fund Performance Comparator")
     
     analyzer = st.session_state.analyzer
     
-    st.subheader("Select Funds to Compare (3-5 funds recommended)")
-    
-    # Fund selection
-    all_funds = analyzer.df['scheme_name'].tolist()
+    all_schemes = analyzer.df['scheme_name'].tolist()
     selected_funds = st.multiselect(
-        "Choose funds",
-        all_funds,
+        "Select Funds to Compare (max 5)",
+        all_schemes,
         max_selections=5
     )
     
-    if len(selected_funds) >= 2:
-        # Get fund data
-        funds_data = []
-        for fund_name in selected_funds:
-            fund = analyzer.df[analyzer.df['scheme_name'] == fund_name].iloc[0]
-            funds_data.append(fund)
+    if len(selected_funds) > 1:
+        comparison = analyzer.compare_funds(selected_funds)
         
-        # Detailed comparison
-        comparison_df = PerformanceComparator.compare_funds_detailed(funds_data)
-        
-        st.dataframe(comparison_df, use_container_width=True, height=300)
+        # Display comparison
+        st.dataframe(comparison, use_container_width=True)
         
         # Visual comparison
-        col1, col2 = st.columns(2)
+        metrics_to_plot = ['quality_score', 'sharpe', 'alpha', 'returns_3yr']
         
-        with col1:
-            # Returns comparison
-            returns_fig = go.Figure()
-            
-            for fund in funds_data:
-                returns_fig.add_trace(go.Bar(
-                    name=fund['scheme_name'][:30],
-                    x=['1Y', '3Y', '5Y'],
-                    y=[
-                        fund['returns_1yr'],
-                        fund['returns_3yr'] if pd.notna(fund['returns_3yr']) else 0,
-                        fund['returns_5yr'] if pd.notna(fund['returns_5yr']) else 0
-                    ]
-                ))
-            
-            returns_fig.update_layout(
-                title='Returns Comparison',
-                barmode='group',
-                yaxis_title='Return (%)',
-                height=350
-            )
-            
-            st.plotly_chart(returns_fig, use_container_width=True)
+        fig = go.Figure()
         
-        with col2:
-            # Risk-Return scatter
-            scatter_fig = go.Figure()
-            
-            for fund in funds_data:
-                scatter_fig.add_trace(go.Scatter(
-                    x=[fund.get('risk_score', 50)],
-                    y=[fund['returns_3yr'] if pd.notna(fund['returns_3yr']) else fund['returns_1yr']],
-                    mode='markers+text',
-                    name=fund['scheme_name'][:20],
-                    text=[fund['scheme_name'][:20]],
-                    textposition='top center',
-                    marker=dict(size=15)
-                ))
-            
-            scatter_fig.update_layout(
-                title='Risk vs Return',
-                xaxis_title='Risk Score',
-                yaxis_title='3Y Return (%)',
-                height=350,
-                showlegend=False
-            )
-            
-            st.plotly_chart(scatter_fig, use_container_width=True)
+        for metric in metrics_to_plot:
+            fig.add_trace(go.Bar(
+                name=metric.replace('_', ' ').title(),
+                x=comparison['scheme_name'],
+                y=comparison[metric],
+            ))
         
-        # Peer comparison
-        st.subheader("📊 Peer Group Analysis")
+        fig.update_layout(barmode='group', title='Performance Comparison')
+        st.plotly_chart(fig, use_container_width=True)
+
+
+def show_wealthywise_assistant():
+    """Display the WealthyWise Assistant chatbot interface"""
+    st.header("🤖 WealthyWise Assistant")
+    st.subheader("Your Educational Investment AI Assistant")
+    st.markdown("Ask me about your investor persona, portfolio allocation, and investment concepts. I provide educational information only.")
+    
+    # Check if persona data exists
+    persona_data = getattr(st.session_state, 'persona_data', None)
+    if persona_data is None and hasattr(st.session_state, 'user_profile') and st.session_state.user_profile:
+        # Try to get persona data from user profile
+        persona_data = st.session_state.user_profile.get('persona', None)
+    
+    if persona_data is None:
+        st.warning("Please generate your risk profile first to get personalized insights.")
+        return
+    
+    # Display chat history
+    for message in st.session_state.chat_history:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+    
+    # Chat input
+    if prompt := st.chat_input("Ask about your investor persona or portfolio..."):
+        # Add user message to history
+        st.session_state.chat_history.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
         
-        for fund in funds_data:
-            peer_analysis = PerformanceComparator.peer_comparison(fund, analyzer.df)
-            
-            if peer_analysis:
-                with st.expander(f"📍 {fund['scheme_name']}", expanded=False):
-                    col1, col2, col3, col4 = st.columns(4)
-                    
-                    with col1:
-                        st.metric("Category Rank", f"{peer_analysis['rank_in_category']}/{peer_analysis['total_peers']}")
-                    with col2:
-                        st.metric("Return Percentile", f"{peer_analysis['returns_percentile']:.0f}th")
-                    with col3:
-                        st.metric("Sharpe Percentile", f"{peer_analysis['sharpe_percentile']:.0f}th")
-                    with col4:
-                        status = "✅ Superior" if peer_analysis['better_than_peers'] else "⚠️ Average"
-                        st.metric("vs Peers", status)
+        # Get assistant response
+        response = get_chatbot_response(prompt, persona_data)
+        
+        # Add assistant response to history
+        st.session_state.chat_history.append({"role": "assistant", "content": response})
+        with st.chat_message("assistant"):
+            st.markdown(response)
 
 
 def main():
@@ -665,7 +643,8 @@ def main():
             "🎯 What-If Scenarios",
             "⚖️ Fund Comparison",
             "💹 SIP Calculator",
-            "📚 Learning Hub"
+            "📚 Learning Hub",
+            "🤖 WealthyWise Assistant"  # Added new assistant option
         ]
     )
     
@@ -737,6 +716,31 @@ def main():
         profile_info = RISK_PROFILES[risk_profile]
         st.info(f"**Your Risk Profile: {profile_info['name']}** - {profile_info['description']}")
         
+        # Save persona data for the chatbot
+        # For this advanced app, we'll create a simplified persona based on risk profile
+        persona_mappings = {
+            'conservative': {
+                'name': 'Capital Preservation Planner',
+                'explanation': 'Conservative investors focused on protecting their principal investment with minimal risk exposure.',
+                'allocation_range': {'equity': (0, 20), 'debt': (80, 100)},
+                'volatility_tolerance': 'Low'
+            },
+            'moderate': {
+                'name': 'Balanced Growth Seeker',
+                'explanation': 'Moderate-risk investors seeking a balance between steady growth and capital protection.',
+                'allocation_range': {'equity': (30, 60), 'debt': (40, 70)},
+                'volatility_tolerance': 'Medium'
+            },
+            'aggressive': {
+                'name': 'Growth-Oriented Investor',
+                'explanation': 'Aggressive investors willing to accept higher volatility for maximum growth potential.',
+                'allocation_range': {'equity': (70, 100), 'debt': (0, 30)},
+                'volatility_tolerance': 'High'
+            }
+        }
+        
+        st.session_state.persona_data = persona_mappings.get(risk_profile, persona_mappings['moderate'])
+        
         if st.button("🎯 Generate Personalized Portfolio", type="primary", use_container_width=True):
             with st.spinner("Analyzing 800+ funds and building your optimal portfolio..."):
                 portfolio = st.session_state.analyzer.recommend_funds(
@@ -752,7 +756,8 @@ def main():
                     'investment_amount': investment_amount,
                     'horizon': horizon,
                     'goal': goal,
-                    'risk_profile': risk_profile
+                    'risk_profile': risk_profile,
+                    'persona': persona_mappings.get(risk_profile, persona_mappings['moderate'])
                 }
                 st.session_state.recommended_portfolio = portfolio
                 st.success("✅ Portfolio generated successfully!")
@@ -857,7 +862,10 @@ def main():
             7. **Emergency Fund First**: 6-12 months expenses
             8. **Tax Efficiency**: Use ELSS for 80C benefits
             """)
-
+    
+    # Added for WealthyWise Assistant
+    elif page == "🤖 WealthyWise Assistant":
+        show_wealthywise_assistant()
 
 if __name__ == "__main__":
     main()

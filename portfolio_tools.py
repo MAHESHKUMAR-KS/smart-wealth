@@ -6,6 +6,13 @@ import numpy as np
 from typing import Dict, List, Tuple
 from config import TAX_RATES
 
+# Optional import of AI persona engine for enhanced functionality
+try:
+    from ai_risk_persona import get_investor_persona
+    AI_PERSONA_AVAILABLE = True
+except ImportError:
+    AI_PERSONA_AVAILABLE = False
+
 
 class SIPCalculator:
     """Systematic Investment Plan Calculator with advanced features"""
@@ -285,3 +292,52 @@ class PortfolioAnalyzer:
             return 0
         
         return round(return_score / risk_score, 2)
+    
+    @staticmethod
+    def analyze_with_ai_persona(portfolio: pd.DataFrame, 
+                               age: int,
+                               horizon: int,
+                               risk_reaction: str,
+                               goal: str,
+                               volatility: str) -> Dict:
+        """
+        Analyze portfolio using AI investor persona engine
+        
+        Args:
+            portfolio (pd.DataFrame): Portfolio to analyze
+            age (int): Investor age
+            horizon (int): Investment horizon in years
+            risk_reaction (str): How investor reacts to market downturns
+            goal (str): Primary financial goal
+            volatility (str): Comfort level with portfolio fluctuations
+            
+        Returns:
+            Dict: Analysis results including persona information and recommendations
+        """
+        if not AI_PERSONA_AVAILABLE:
+            raise ImportError("AI Risk Persona Engine not available")
+        
+        # Get AI investor persona
+        persona = get_investor_persona(age, horizon, risk_reaction, goal, volatility)
+        
+        # Calculate standard metrics
+        metrics = PortfolioAnalyzer.calculate_portfolio_metrics(portfolio)
+        
+        # Check if allocation aligns with persona recommendations
+        current_equity = metrics.get('expected_return_3yr', 50)  # Simplified for example
+        suggested_equity_range = persona['allocation_range']['equity']
+        
+        allocation_aligned = (
+            suggested_equity_range[0] <= current_equity <= suggested_equity_range[1]
+        )
+        
+        return {
+            'persona': persona,
+            'metrics': metrics,
+            'allocation_aligned': allocation_aligned,
+            'recommendation': (
+                "Your portfolio aligns well with your investor persona" 
+                if allocation_aligned 
+                else "Consider adjusting your portfolio to better match your investor persona"
+            )
+        }

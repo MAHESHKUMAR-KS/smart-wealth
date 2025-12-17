@@ -9,6 +9,17 @@ from fund_analyzer import FundAnalyzer
 from portfolio_tools import SIPCalculator, GoalPlanner, PortfolioAnalyzer
 from config import *
 
+# Import the new AI Risk Persona Engine
+try:
+    from ai_risk_persona import get_investor_persona
+    AI_PERSONA_AVAILABLE = True
+except ImportError:
+    AI_PERSONA_AVAILABLE = False
+    st.warning("AI Risk Persona Engine not available. Using traditional risk profiling.")
+
+# Import the WealthyWise Assistant
+from wealthywise_assistant import render_chat_interface
+
 # Page configuration
 st.set_page_config(
     page_title="WealthyWise Professional",
@@ -57,6 +68,8 @@ if 'user_profile' not in st.session_state:
     st.session_state.user_profile = {}
 if 'recommended_portfolio' not in st.session_state:
     st.session_state.recommended_portfolio = None
+if 'user_persona' not in st.session_state:  # Added for AI persona
+    st.session_state.user_persona = None
 
 
 def show_disclaimer():
@@ -66,8 +79,19 @@ def show_disclaimer():
 
 
 def risk_profiler():
-    """Interactive risk profiling questionnaire"""
+    """Interactive risk profiling questionnaire with AI persona enhancement"""
     st.header("📊 Build Your Investor Profile")
+    
+    # Toggle for AI persona engine
+    if AI_PERSONA_AVAILABLE:
+        use_ai_persona = st.toggle("Enable AI Investor Persona Engine", value=True)
+        if use_ai_persona:
+            st.info("🤖 AI Persona Engine Active: Dynamic investor profiling based on behavioral patterns")
+        else:
+            st.info("📋 Traditional Risk Profiling: Static risk assessment based on questionnaire")
+    else:
+        use_ai_persona = False
+        st.warning("AI Risk Persona Engine not available. Using traditional risk profiling.")
     
     col1, col2 = st.columns(2)
     
@@ -109,30 +133,95 @@ def risk_profiler():
             horizontal=True
         )
     
-    # Calculate risk profile
-    risk_scores = {
-        "Panic and sell": 1, "Feel concerned": 2, "Hold steady": 3, "Buy more": 4,
-        "Preserving capital": 1, "Steady growth": 2, "Beating inflation": 3, "Maximum returns": 4
-    }
+    # Map questionnaire answers to AI persona engine inputs
+    if use_ai_persona and AI_PERSONA_AVAILABLE:
+        # Map risk reaction to AI persona inputs
+        risk_reaction_map = {
+            "Panic and sell": "very_concerned",
+            "Feel concerned": "concerned",
+            "Hold steady": "neutral",
+            "Buy more": "very_comfortable"
+        }
+        
+        # Map goal importance to AI persona inputs
+        goal_map = {
+            "Preserving capital": "capital_preservation",
+            "Steady growth": "income_generation",
+            "Beating inflation": "balanced_growth",
+            "Maximum returns": "aggressive_growth"
+        }
+        
+        # Determine volatility tolerance based on risk reaction
+        volatility_map = {
+            "Panic and sell": "uncomfortable",
+            "Feel concerned": "slightly_uncomfortable",
+            "Hold steady": "neutral",
+            "Buy more": "very_comfortable"
+        }
+        
+        # Get AI persona
+        try:
+            persona = get_investor_persona(
+                age=age,
+                horizon=horizon,
+                risk_reaction=risk_reaction_map[q1],
+                goal=goal_map[q2],
+                volatility=volatility_map[q1]
+            )
+            
+            # Display AI persona information
+            st.success(f"**🤖 AI Investor Persona: {persona['name']}**")
+            st.caption(persona['explanation'])
+            st.caption(f"Volatility Tolerance: {persona['volatility_tolerance']}")
+            equity_range = persona['allocation_range']['equity']
+            st.caption(f"Suggested Equity Allocation: {equity_range[0]}-{equity_range[1]}%")
+            
+            # Map persona to traditional risk profile for compatibility
+            persona_risk_mapping = {
+                'Capital Preservation Planner': 'conservative',
+                'Income-Focused Stabilizer': 'moderate', 
+                'Long-Term Growth Optimizer': 'moderate',
+                'Opportunistic Risk Taker': 'aggressive'
+            }
+            
+            ai_risk_profile = persona_risk_mapping[persona['name']]
+            
+            # Save persona to session state
+            st.session_state.user_persona = persona
+            
+        except Exception as e:
+            st.error(f"Error getting AI persona: {str(e)}")
+            use_ai_persona = False  # Fallback to traditional method
     
-    score = risk_scores[q1] + risk_scores[q2]
+    # Calculate traditional risk profile (fallback)
+    if not use_ai_persona or not AI_PERSONA_AVAILABLE:
+        risk_scores = {
+            "Panic and sell": 1, "Feel concerned": 2, "Hold steady": 3, "Buy more": 4,
+            "Preserving capital": 1, "Steady growth": 2, "Beating inflation": 3, "Maximum returns": 4
+        }
+        
+        score = risk_scores[q1] + risk_scores[q2]
+        
+        if score <= 3:
+            risk_profile = 'conservative'
+        elif score <= 5:
+            risk_profile = 'moderate'
+        else:
+            risk_profile = 'aggressive'
+        
+        # Show determined risk profile
+        profile_info = RISK_PROFILES[risk_profile]
+        st.info(f"**Your Risk Profile: {profile_info['name']}** - {profile_info['description']}")
     
-    if score <= 3:
-        risk_profile = 'conservative'
-    elif score <= 5:
-        risk_profile = 'moderate'
-    else:
-        risk_profile = 'aggressive'
-    
-    # Show determined risk profile
-    profile_info = RISK_PROFILES[risk_profile]
-    st.info(f"**Your Risk Profile: {profile_info['name']}** - {profile_info['description']}")
-    
+    # Generate portfolio button
     if st.button("🎯 Generate Personalized Portfolio", type="primary", use_container_width=True):
         with st.spinner("Analyzing 800+ funds and building your optimal portfolio..."):
+            # Use AI persona risk profile if available, otherwise use traditional
+            final_risk_profile = ai_risk_profile if use_ai_persona and AI_PERSONA_AVAILABLE else risk_profile
+            
             portfolio = st.session_state.analyzer.recommend_funds(
                 investment_amount=investment_amount,
-                risk_profile=risk_profile,
+                risk_profile=final_risk_profile,
                 age=age,
                 horizon=horizon,
                 goal=goal
@@ -143,7 +232,8 @@ def risk_profiler():
                 'investment_amount': investment_amount,
                 'horizon': horizon,
                 'goal': goal,
-                'risk_profile': risk_profile
+                'risk_profile': final_risk_profile,
+                'ai_persona_used': use_ai_persona and AI_PERSONA_AVAILABLE
             }
             st.session_state.recommended_portfolio = portfolio
             st.success("✅ Portfolio generated successfully!")
@@ -159,7 +249,27 @@ def show_portfolio_recommendations():
     portfolio = st.session_state.recommended_portfolio
     profile = st.session_state.user_profile
     
-    st.header("🎯 Your Personalized Investment Portfolio")
+    # Display header with persona information
+    if profile.get('ai_persona_used', False) and st.session_state.user_persona:
+        st.header("🎯 Your Personalized Investment Portfolio (AI Enhanced)")
+        st.caption("Generated using AI Investor Persona Engine for more accurate risk profiling")
+        
+        # Show persona details
+        persona = st.session_state.user_persona
+        st.info(f"**👤 Your Investor Persona: {persona['name']}**")
+        st.markdown(f"*{persona['explanation']}*")
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Volatility Tolerance", persona['volatility_tolerance'])
+        with col2:
+            equity_range = persona['allocation_range']['equity']
+            st.metric("Suggested Equity Range", f"{equity_range[0]}-{equity_range[1]}%")
+        with col3:
+            debt_range = persona['allocation_range']['debt']
+            st.metric("Suggested Debt Range", f"{debt_range[0]}-{debt_range[1]}%")
+    else:
+        st.header("🎯 Your Personalized Investment Portfolio")
     
     # Portfolio summary metrics
     metrics = PortfolioAnalyzer.calculate_portfolio_metrics(portfolio)
@@ -431,74 +541,69 @@ def fund_explorer():
 
 
 def main():
-    """Main application"""
+    st.markdown('<h1 class="main-header">WealthyWise Professional</h1>', unsafe_allow_html=True)
     
-    # Header
-    st.markdown('<h1 class="main-header">💰 WealthyWise Professional</h1>', unsafe_allow_html=True)
-    st.markdown("### Advanced Mutual Fund Investment Advisory Platform")
-    
-    show_disclaimer()
-    
-    # Sidebar navigation
-    st.sidebar.title("Navigation")
-    page = st.sidebar.radio(
-        "Go to",
-        ["🏠 Home", "👤 Risk Profile & Recommendations", "💹 SIP & Goal Calculator", "🔍 Fund Explorer", "📚 Learning Center"]
-    )
-    
-    # Show fund statistics in sidebar
-    stats = st.session_state.analyzer.get_fund_statistics()
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### Platform Statistics")
-    st.sidebar.metric("Total Funds", stats['total_funds'])
-    st.sidebar.metric("Fund Houses", stats['amcs'])
-    st.sidebar.metric("Top Rated Funds", stats['top_rated_count'])
-    
-    # Route to pages
-    if page == "🏠 Home":
-        col1, col2 = st.columns(2)
+    # Sidebar
+    with st.sidebar:
+        st.image("https://placehold.co/250x100?text=WealthyWise+Logo", use_column_width=True)
+        st.markdown("---")
         
-        with col1:
-            st.markdown("""
-            ## Welcome to WealthyWise Professional
-            
-            Your intelligent investment companion for mutual funds in India.
-            
-            ### What We Offer:
-            - 🎯 **Scientific Risk Profiling** - Not random suggestions
-            - 📊 **Data-Driven Recommendations** - Analyzing 800+ funds
-            - 💹 **Advanced SIP Calculator** - With step-up & tax planning
-            - 🎓 **Goal-Based Planning** - Retirement, education, wealth creation
-            - 📈 **Performance Analytics** - Quality scores & metrics
-            - 🔄 **Portfolio Optimization** - Diversification & rebalancing
-            
-            ### How It Works:
-            1. Complete your investor risk profile
-            2. Get scientifically selected fund recommendations
-            3. Plan your SIPs and investment goals
-            4. Track and optimize your portfolio
-            """)
+        # Define pages with emojis
+        pages = [
+            "🏠 Home Dashboard",
+            "📊 Risk Profiler",
+            "🎯 Portfolio Recommendations",
+            "💹 SIP & Goal Calculator",
+            "🔍 Fund Explorer",
+            "🎓 WealthyWise Assistant",  # Added new assistant page
+            "📚 Learning Center"
+        ]
         
-        with col2:
-            st.markdown("### Quick Stats")
-            
-            # Category distribution
-            cat_dist = pd.DataFrame(stats['categories'].items(), columns=['Category', 'Count'])
-            fig = px.bar(cat_dist, x='Category', y='Count', title='Funds by Category')
-            st.plotly_chart(fig, use_container_width=True)
-            
-            st.info(f"**Average 1Y Return**: {stats['avg_returns_1yr']:.1f}%")
-            st.info(f"**Average 3Y Return**: {stats['avg_returns_3yr']:.1f}%")
-            st.info(f"**Average Expense Ratio**: {stats['avg_expense_ratio']:.2f}%")
+        page = st.selectbox(
+            "Navigate",
+            pages,
+            format_func=lambda x: x.split(" ", 1)[1]  # Remove emoji for cleaner display
+        )
+        
+        st.markdown("---")
+        show_disclaimer()
     
-    elif page == "👤 Risk Profile & Recommendations":
-        if st.session_state.recommended_portfolio is None:
-            risk_profiler()
-        else:
+    # Page routing - use the full page name including emoji
+    if page == "🏠 Home Dashboard":
+        st.header("Welcome to WealthyWise Professional")
+        st.markdown("""
+        Your AI-powered investment advisory platform for smarter mutual fund decisions.
+        
+        ### Key Features:
+        - 🤖 **AI Investor Persona Engine**: Dynamic risk profiling based on behavioral patterns
+        - 📊 **Smart Fund Recommendations**: Personalized fund suggestions based on your profile
+        - 💹 **SIP Calculators**: Plan your investments with precision
+        - 🔍 **Fund Explorer**: Compare and analyze 800+ mutual funds
+        - 🎓 **WealthyWise Assistant**: Educational chatbot for investment guidance
+        """)
+        
+        # Show user profile if exists
+        if st.session_state.user_profile:
+            st.subheader("Your Current Profile")
+            profile = st.session_state.user_profile
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Age", f"{profile['age']} years")
+            with col2:
+                st.metric("Investment Horizon", f"{profile['horizon']} years")
+            with col3:
+                st.metric("Investment Amount", f"₹{profile['investment_amount']:,.0f}")
+    
+    elif page == "📊 Risk Profiler":
+        risk_profiler()
+    
+    elif page == "🎯 Portfolio Recommendations":
+        if st.session_state.recommended_portfolio is not None:
             show_portfolio_recommendations()
-            if st.button("🔄 Create New Profile"):
-                st.session_state.recommended_portfolio = None
-                st.session_state.user_profile = {}
+        else:
+            st.info("Please complete the risk profiling first to get portfolio recommendations.")
+            if st.button("Go to Risk Profiler"):
+                st.session_state.current_page = "Risk Profiler"
                 st.rerun()
     
     elif page == "💹 SIP & Goal Calculator":
@@ -506,6 +611,9 @@ def main():
     
     elif page == "🔍 Fund Explorer":
         fund_explorer()
+    
+    elif page == "🎓 WealthyWise Assistant":  # Added new assistant page
+        render_chat_interface()
     
     elif page == "📚 Learning Center":
         st.header("📚 Investment Education Hub")
@@ -567,7 +675,6 @@ def main():
             - Wealth creation
             - Use: Equity funds, aggressive hybrid
             """)
-
 
 if __name__ == "__main__":
     main()

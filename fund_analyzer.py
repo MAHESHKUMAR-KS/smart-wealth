@@ -6,6 +6,13 @@ import numpy as np
 from typing import List, Dict, Tuple
 from config import *
 
+# Optional import of AI persona engine for enhanced functionality
+try:
+    from ai_risk_persona import get_investor_persona
+    AI_PERSONA_AVAILABLE = True
+except ImportError:
+    AI_PERSONA_AVAILABLE = False
+
 
 class FundAnalyzer:
     """Advanced fund analysis with multi-factor scoring"""
@@ -204,6 +211,57 @@ class FundAnalyzer:
             result_df['allocation_percentage'] = result_df['allocation_percentage'] / total * 100
         
         return result_df
+    
+    def recommend_funds_with_ai_persona(self,
+                                       investment_amount: float,
+                                       age: int,
+                                       horizon: int,
+                                       risk_reaction: str,
+                                       goal: str,
+                                       volatility: str,
+                                       exclude_amcs: List[str] = None) -> Tuple[pd.DataFrame, Dict]:
+        """
+        Enhanced fund recommendation using AI investor persona engine
+        
+        Args:
+            investment_amount (float): Total investment amount
+            age (int): Investor age
+            horizon (int): Investment horizon in years
+            risk_reaction (str): How investor reacts to market downturns
+            goal (str): Primary financial goal
+            volatility (str): Comfort level with portfolio fluctuations
+            exclude_amcs (List[str]): AMCs to exclude from recommendations
+            
+        Returns:
+            Tuple[pd.DataFrame, Dict]: Recommended funds and persona information
+        """
+        if not AI_PERSONA_AVAILABLE:
+            raise ImportError("AI Risk Persona Engine not available")
+        
+        # Get AI investor persona
+        persona = get_investor_persona(age, horizon, risk_reaction, goal, volatility)
+        
+        # Map persona to traditional risk profile
+        persona_risk_mapping = {
+            'Capital Preservation Planner': 'conservative',
+            'Income-Focused Stabilizer': 'moderate', 
+            'Long-Term Growth Optimizer': 'moderate',
+            'Opportunistic Risk Taker': 'aggressive'
+        }
+        
+        mapped_risk_profile = persona_risk_mapping[persona['name']]
+        
+        # Get recommendations using traditional method with AI-enhanced risk profile
+        recommendations = self.recommend_funds(
+            investment_amount=investment_amount,
+            risk_profile=mapped_risk_profile,
+            age=age,
+            horizon=horizon,
+            goal=goal,
+            exclude_amcs=exclude_amcs
+        )
+        
+        return recommendations, persona
     
     def _diversify_selection(self, funds: pd.DataFrame, n: int) -> pd.DataFrame:
         """Select funds ensuring AMC diversification"""
