@@ -5,6 +5,8 @@ import pandas as pd
 import numpy as np
 from typing import List, Dict, Tuple
 from config import *
+from ai_predictor import FundPerformancePredictor
+from ai_risk_assessment import EnhancedRiskProfiler
 
 # Optional import of AI persona engine for enhanced functionality
 try:
@@ -143,7 +145,7 @@ class FundAnalyzer:
                        goal: str = None,
                        exclude_amcs: List[str] = None) -> pd.DataFrame:
         """
-        Intelligent fund recommendation with diversification
+        Intelligent fund recommendation with diversification and AI predictions
         """
         # Calculate allocation
         allocation = self.get_category_allocation(risk_profile, age, horizon)
@@ -151,6 +153,18 @@ class FundAnalyzer:
         # Calculate quality and risk scores
         self.df['quality_score'] = self.df.apply(self.calculate_quality_score, axis=1)
         self.df['risk_score'] = self.df.apply(self.calculate_risk_score, axis=1)
+        
+        # Use AI predictions if available
+        if 'predicted_returns' in self.df.columns:
+            # Incorporate predicted returns into quality score
+            pred_weight = 0.2  # 20% weight to predictions
+            max_pred = self.df['predicted_returns'].max()
+            if max_pred > 0:
+                pred_score = (self.df['predicted_returns'] / max_pred) * 100
+                self.df['quality_score'] = (
+                    self.df['quality_score'] * (1 - pred_weight) + 
+                    pred_score * pred_weight
+                )
         
         recommended_funds = []
         
