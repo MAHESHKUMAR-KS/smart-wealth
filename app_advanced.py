@@ -15,6 +15,8 @@ from portfolio_tools import SIPCalculator, GoalPlanner, PortfolioAnalyzer
 from realtime_data import RealTimeDataFetcher, LivePortfolioTracker, NewsSimulator
 from backtesting import BacktestEngine, PerformanceComparator, WhatIfAnalyzer
 from config import *
+from ai_predictor import FundPerformancePredictor, PortfolioOptimizer, integrate_ai_features
+from ai_assistant import FinancialAIAssistant
 
 # Page configuration
 st.set_page_config(
@@ -80,6 +82,11 @@ st.markdown("""
 # Initialize session state
 if 'analyzer' not in st.session_state:
     st.session_state.analyzer = FundAnalyzer()
+    # Initialize AI components
+    predictor, optimizer = integrate_ai_features(st.session_state.analyzer, st.session_state.analyzer.df)
+    st.session_state.predictor = predictor
+    st.session_state.optimizer = optimizer
+
 if 'realtime_fetcher' not in st.session_state:
     st.session_state.realtime_fetcher = RealTimeDataFetcher(st.session_state.analyzer.df)
 if 'backtest_engine' not in st.session_state:
@@ -665,6 +672,7 @@ def main():
             "🎯 What-If Scenarios",
             "⚖️ Fund Comparison",
             "💹 SIP Calculator",
+            "🤖 AI Assistant",
             "📚 Learning Hub"
         ]
     )
@@ -815,6 +823,11 @@ def main():
     elif page == "💹 SIP Calculator":
         st.header("💹 SIP Calculator & Goal Planner")
         st.info("Use the What-If Scenarios section for detailed SIP analysis")
+        
+    elif page == "🤖 AI Assistant":
+        # Initialize and render AI assistant
+        assistant = FinancialAIAssistant()
+        assistant.render_chat_interface()
         
     elif page == "📚 Learning Hub":
         st.header("📚 Investment Education Hub")

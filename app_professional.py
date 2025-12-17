@@ -8,6 +8,7 @@ import plotly.graph_objects as go
 from fund_analyzer import FundAnalyzer
 from portfolio_tools import SIPCalculator, GoalPlanner, PortfolioAnalyzer
 from config import *
+from ai_predictor import FundPerformancePredictor, integrate_ai_features
 
 # Page configuration
 st.set_page_config(
@@ -53,6 +54,10 @@ st.markdown("""
 # Initialize session state
 if 'analyzer' not in st.session_state:
     st.session_state.analyzer = FundAnalyzer()
+    # Initialize AI components
+    predictor, optimizer = integrate_ai_features(st.session_state.analyzer, st.session_state.analyzer.df)
+    st.session_state.predictor = predictor
+
 if 'user_profile' not in st.session_state:
     st.session_state.user_profile = {}
 if 'recommended_portfolio' not in st.session_state:
